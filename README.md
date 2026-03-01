@@ -20,9 +20,10 @@ Step By Step:
 6. RUN THE GAME ONCE
 
 7. Then Download: FrogHopMenu.dll From the Realease Channel (Right Side Middle Of This Page)
+   or go to here: https://github.com/CaptainMods/FrogHopMenu/releases/tag/ModMenu
 
-8. Drag and Drop it into: C:\Program Files (x86)\Steam\steamapps\common\Frog Sqwad Demo\BepInEx\plugins
+9. Drag and Drop it into: C:\Program Files (x86)\Steam\steamapps\common\Frog Sqwad Demo\BepInEx\plugins
 
-9. Click Play and Enjoy
+10. Click Play and Enjoy
 
 Note: Source Code has all the Code Used in This Project
