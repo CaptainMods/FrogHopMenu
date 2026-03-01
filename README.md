@@ -28,4 +28,4 @@ Step By Step:
 
 Note: Source Code has all the Code Used in This Project
 
-Any Questions Reach Out to Me on Discord: CaptnCrunch1109
+Any Questions Reach Out to Me on Discord
