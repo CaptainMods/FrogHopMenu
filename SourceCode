@@ -1,0 +1,137 @@
+using BepInEx;
+using HarmonyLib;
+using UnityEngine;
+using Fusion;
+using FrogSqwad.Character;
+
+[BepInPlugin("com.generic.froghop", "FrogHop Menu", "3.9.0")]
+public class FrogHopMenu : BaseUnityPlugin
+{
+    public static bool FlyEnabled = false, SpeedEnabled = false, SuperJumpEnabled = false;
+    public static bool LowGravity = false, AirJumpEnabled = false;
+
+    public static float FlySpeed = 20f, SpeedMultiplier = 5f, JumpPower = 25f, GravityStrength = 12f, TongueReach = 50f;
+    private const float DefFly = 20f, DefSpeed = 5f, DefJump = 25f, DefGrav = 12f, DefTongue = 50f;
+
+    private bool _showGui = true;
+    // Increased height to 520 to prevent text cutoff [cite: 2026-03-01]
+    private Rect _windowRect = new Rect(40, 40, 280, 520);
+
+    void Awake() { new Harmony("com.generic.froghop").PatchAll(); }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.G)) _showGui = !_showGui;
+    }
+
+    void OnGUI()
+    {
+        if (!_showGui) return;
+        GUI.backgroundColor = new Color(0.35f, 0f, 0.45f, 1f);
+        GUI.contentColor = Color.white;
+        _windowRect = GUI.Window(0, _windowRect, DrawWindow, "FrogHop Menu");
+    }
+
+    void DrawWindow(int windowID)
+    {
+        GUILayout.BeginVertical();
+
+        FlyEnabled = GUILayout.Toggle(FlyEnabled, " Enable Flight");
+        DrawCompactSlider(ref FlySpeed, 5f, 200f, "F0");
+
+        SpeedEnabled = GUILayout.Toggle(SpeedEnabled, " Enable Speed Boost");
+        DrawCompactSlider(ref SpeedMultiplier, 1f, 50f, "F1");
+
+        SuperJumpEnabled = GUILayout.Toggle(SuperJumpEnabled, " Enable Super Jump");
+        DrawCompactSlider(ref JumpPower, 10f, 150f, "F0");
+
+        LowGravity = GUILayout.Toggle(LowGravity, " Enable Low Gravity");
+        DrawCompactSlider(ref GravityStrength, 0f, 40f, "F0");
+
+        GUILayout.Label(" Tongue Reach Distance");
+        DrawCompactSlider(ref TongueReach, 5f, 500f, "F0");
+
+        AirJumpEnabled = GUILayout.Toggle(AirJumpEnabled, " Enable Air Jump");
+
+        GUILayout.FlexibleSpace();
+
+        if (GUILayout.Button("RESET TO DEFAULT", GUILayout.Height(25)))
+        {
+            FlySpeed = DefFly; SpeedMultiplier = DefSpeed;
+            JumpPower = DefJump; GravityStrength = DefGrav;
+            TongueReach = DefTongue;
+        }
+
+        // Footer Section - Added extra height to prevent cutoff [cite: 2026-03-01]
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Label("Developed by Captain", GUILayout.Height(20));
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Label("Dragable Menu | v3.9.0", GUILayout.Height(20));
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+
+        GUILayout.Label("Press G to Hide", GUILayout.Height(20));
+
+        GUILayout.EndVertical();
+        GUI.DragWindow();
+    }
+
+    void DrawCompactSlider(ref float val, float min, float max, string format)
+    {
+        GUILayout.BeginHorizontal();
+        val = GUILayout.HorizontalSlider(val, min, max, GUILayout.Height(20));
+        // Widened label from 30 to 45 so values don't get cut [cite: 2026-03-01]
+        GUILayout.Label($"{val.ToString(format)}", GUILayout.Width(45), GUILayout.Height(20));
+        GUILayout.EndHorizontal();
+    }
+}
+
+[HarmonyPatch(typeof(FrogNetworkMovementPhysics), "Render")]
+public class GlobalPatch
+{
+    [HarmonyPrefix]
+    static void Prefix(FrogNetworkMovementPhysics __instance)
+    {
+        if (!__instance.Object.HasInputAuthority) return;
+        Rigidbody rb = __instance.GetComponent<Rigidbody>();
+
+        // Stamina Always On [cite: 2026-02-13]
+        var staminaField = AccessTools.Field(typeof(FrogNetworkMovementPhysics), "_currentStamina");
+        if (staminaField != null) staminaField.SetValue(__instance, 100f);
+
+        // Tongue Logic
+        var tongue = __instance.GetComponentInChildren<Tongue>();
+        if (tongue != null)
+            AccessTools.Field(typeof(Tongue), "_tongueShootDistance").SetValue(tongue, FrogHopMenu.TongueReach);
+
+        if (FrogHopMenu.FlyEnabled)
+        {
+            rb.isKinematic = true;
+            Vector3 dir = (__instance.transform.forward * Input.GetAxis("Vertical")) + (__instance.transform.right * Input.GetAxis("Horizontal"));
+            if (Input.GetKey(KeyCode.Space)) dir.y += 1f;
+            if (Input.GetKey(KeyCode.LeftControl)) dir.y -= 1f;
+            __instance.transform.position += dir * FrogHopMenu.FlySpeed * Time.deltaTime;
+        }
+        else
+        {
+            rb.isKinematic = false;
+            if (FrogHopMenu.SpeedEnabled)
+            {
+                Vector3 moveDir = (__instance.transform.forward * Input.GetAxis("Vertical")) + (__instance.transform.right * Input.GetAxis("Horizontal"));
+                if (moveDir.magnitude > 0.1f)
+                    rb.linearVelocity = new Vector3(moveDir.normalized.x * FrogHopMenu.SpeedMultiplier, rb.linearVelocity.y, moveDir.normalized.z * FrogHopMenu.SpeedMultiplier);
+            }
+            if (FrogHopMenu.LowGravity) rb.AddForce(Vector3.up * FrogHopMenu.GravityStrength, ForceMode.Acceleration);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space) && (FrogHopMenu.AirJumpEnabled || Physics.Raycast(__instance.transform.position, Vector3.down, 1.2f)))
+        {
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, FrogHopMenu.SuperJumpEnabled ? FrogHopMenu.JumpPower : 12f, rb.linearVelocity.z);
+        }
+    }
+}
