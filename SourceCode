@@ -4,7 +4,7 @@ using UnityEngine;
 using Fusion;
 using FrogSqwad.Character;
 
-[BepInPlugin("com.generic.froghop", "FrogHop Menu", "3.9.0")]
+[BepInPlugin("com.generic.froghop", "FrogHopMenu", "1.0.1")]
 public class FrogHopMenu : BaseUnityPlugin
 {
     public static bool FlyEnabled = false, SpeedEnabled = false, SuperJumpEnabled = false;
@@ -71,7 +71,7 @@ public class FrogHopMenu : BaseUnityPlugin
 
         GUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        GUILayout.Label("Dragable Menu | v3.9.0", GUILayout.Height(20));
+        GUILayout.Label("Dragable Menu | v1.0.1", GUILayout.Height(20));
         GUILayout.FlexibleSpace();
         GUILayout.EndHorizontal();
 
